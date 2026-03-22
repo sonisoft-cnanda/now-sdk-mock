@@ -1,0 +1,21 @@
+{
+    "name": "sdk-mock-script-include",
+    "version": "0.0.1",
+    "description": "ServiceNow Scoped Application",
+    "license": "UNLICENSED",
+    "scripts": {
+        "build": "now-sdk build",
+        "deploy": "now-sdk install",
+        "transform": "now-sdk transform",
+        "types": "now-sdk dependencies",
+        "test": "npx jest --config jest.config.ts"
+    },
+    "devDependencies": {
+        "@servicenow/eslint-plugin-sdk-app-plugin": "3.0.1",
+        "@servicenow/glide": "git://github.com/sonisoft-cnanda/servicenow-glide",
+        "@servicenow/sdk": "3.0.1",
+        "eslint": "8.50.0",
+        "sn-sdk-mock": "file:../../.",
+        "ts-jest": "^29.3.4"
+    }
+}

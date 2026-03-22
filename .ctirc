@@ -1,0 +1,24 @@
+{
+  "spinnerStream": "stdout",
+  "progressStream": "stdout",
+  "reasonerStream": "stderr",
+  "options": [
+    {
+      "mode": "create",
+      "project": "./tsconfig.json",
+      "startFrom": "./src",
+      "exclude": [
+        "assets",
+        "types"
+      ],
+      "include":[
+        "src/**"
+      ],
+      "noBackup":true,
+      "exportFilename": "index.ts",
+      "useSemicolon": true,
+      
+      "overwrite": true
+    }
+  ]
+}
