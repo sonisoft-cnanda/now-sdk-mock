@@ -49,7 +49,13 @@ export class InMemoryDataTable{
 
 
     public getRowBySysId(sysId:string){
-        return this._rows.find((row) => row.sys_id === sysId);
+        return this._rows.find((row) => {
+            const id = row.sys_id;
+            if (id && typeof id === 'object' && typeof id.getValue === 'function') {
+                return id.getValue() === sysId;
+            }
+            return id === sysId;
+        });
     }
 
     public getRowByField(field:string,value:string){

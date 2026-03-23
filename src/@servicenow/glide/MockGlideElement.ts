@@ -22,8 +22,22 @@ export class MockGlideElement {
         this._value = value;
     }
 
+    toString(): string {
+        if (this._value === null || this._value === undefined) {
+            return '';
+        }
+        return String(this._value);
+    }
+
+    [Symbol.toPrimitive](hint: string): string | number {
+        if (hint === 'number') {
+            return Number(this._value);
+        }
+        return this.toString();
+    }
+
     getDisplayValue(): string {
-        return this._value.toString();
+        return this.toString();
     }
 
     getRefRecord(): MockGlideRecord {
@@ -59,11 +73,11 @@ export class MockGlideElement {
     }
 
     getHTMLValue(): string {
-        return this._value.toString();
+        return this.toString();
     }
 
     getRefTable(): string {
-        return 'some_table'; // Adjust as needed
+        return this._refRecordTableName || '';
     }
 
     getRefField(): string {
@@ -75,7 +89,7 @@ export class MockGlideElement {
     }
 
     getRefRecordDisplayValue(): string {
-        return this._value.toString();
+        return this.toString();
     }
 
     getRefRecordValue(): any {
@@ -83,7 +97,7 @@ export class MockGlideElement {
     }
 
     getRefRecordDisplayValues(): string[] {
-        return [this._value.toString()];
+        return [this.toString()];
     }
 
     getRefRecordValues(): any[] {

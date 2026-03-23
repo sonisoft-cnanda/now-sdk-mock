@@ -500,8 +500,125 @@ describe('MockGlideRecord', () => {
             gr2.query();
             expect(gr2.next()).toBe(true);
             expect(gr2.getValue('short_description')).toBe('Inserted record');
-            // sys_id is stored as a plain string (not MockGlideElement), so access via mockCurrent
-            expect(gr2.mockCurrent.sys_id).toBe(sysId);
+            expect(gr2.getValue('sys_id')).toBe(sysId);
+        });
+    });
+
+    describe('dot-walking', () => {
+        it('property getter should return MockGlideElement', () => {
+            Database.getInstance().addTable('incident');
+            const gr = new MockGlideRecord('incident');
+            gr.setValue('short_description', 'Test incident');
+
+            const element = (gr as any).short_description;
+            expect(element).toBeInstanceOf(MockGlideElement);
+        });
+
+        it('MockGlideElement toString should return the string value', () => {
+            Database.getInstance().addTable('incident');
+            const gr = new MockGlideRecord('incident');
+            gr.setValue('short_description', 'Test incident');
+
+            const element = (gr as any).short_description;
+            expect(element.toString()).toBe('Test incident');
+        });
+
+        it('string concatenation should work via Symbol.toPrimitive', () => {
+            Database.getInstance().addTable('incident');
+            const gr = new MockGlideRecord('incident');
+            gr.setValue('short_description', 'Server down');
+
+            expect(`Incident: ${(gr as any).short_description}`).toBe('Incident: Server down');
+        });
+
+        it('property setter should call setValue', () => {
+            Database.getInstance().addTable('incident');
+            const gr = new MockGlideRecord('incident');
+
+            (gr as any).short_description = 'Set via dot notation';
+            expect(gr.getValue('short_description')).toBe('Set via dot notation');
+        });
+
+        it('getValue should still return string', () => {
+            Database.getInstance().addTable('incident');
+            const gr = new MockGlideRecord('incident');
+            gr.setValue('category', 'hardware');
+
+            const value = gr.getValue('category');
+            expect(typeof value).toBe('string');
+            expect(value).toBe('hardware');
+        });
+
+        it('getValue should return empty string for missing fields', () => {
+            Database.getInstance().addTable('incident');
+            const gr = new MockGlideRecord('incident');
+            expect(gr.getValue('nonexistent')).toBe('');
+        });
+
+        it('should handle seeded plain data without crashing', () => {
+            const table = Database.getInstance().addTable('incident');
+            table.addRow({ sys_id: 'abc', short_description: 'Seeded' });
+
+            const gr = new MockGlideRecord('incident');
+            gr.get('abc');
+            // getValue handles plain string values
+            expect(gr.getValue('short_description')).toBe('Seeded');
+        });
+
+        it('getElement and dot-walking should return the same MockGlideElement', () => {
+            Database.getInstance().addTable('incident');
+            const gr = new MockGlideRecord('incident');
+            gr.setValue('short_description', 'Test');
+
+            const viaElement = gr.getElement('short_description');
+            const viaDotWalk = (gr as any).short_description;
+            expect(viaElement).toBe(viaDotWalk);
+        });
+
+        it('GlideElement methods should be available on dot-walked properties', () => {
+            Database.getInstance().addTable('incident');
+            const gr = new MockGlideRecord('incident');
+            gr.setValue('short_description', 'Test');
+
+            const elem = (gr as any).short_description;
+            expect(elem.getValue()).toBe('Test');
+            expect(elem.getDisplayValue()).toBe('Test');
+            expect(elem.nil()).toBe(false);
+            expect(elem.getBooleanValue()).toBe(true);
+        });
+
+        it('insert then get should support dot-walking', () => {
+            Database.getInstance().addTable('incident');
+
+            const gr1 = new MockGlideRecord('incident');
+            gr1.setValue('short_description', 'Created');
+            gr1.setValue('priority', '1');
+            const sysId = gr1.insert();
+
+            const gr2 = new MockGlideRecord('incident');
+            gr2.get(sysId);
+            expect((gr2 as any).short_description.toString()).toBe('Created');
+            expect((gr2 as any).priority.toString()).toBe('1');
+        });
+
+        it('query iteration should support dot-walking', () => {
+            const table = Database.getInstance().addTable('incident');
+
+            const gr1 = new MockGlideRecord('incident');
+            gr1.setValue('short_description', 'First');
+            gr1.insert();
+
+            const gr2 = new MockGlideRecord('incident');
+            gr2.setValue('short_description', 'Second');
+            gr2.insert();
+
+            const gr3 = new MockGlideRecord('incident');
+            gr3.query();
+            const results: string[] = [];
+            while (gr3.next()) {
+                results.push((gr3 as any).short_description.toString());
+            }
+            expect(results).toEqual(['First', 'Second']);
         });
     });
 });
