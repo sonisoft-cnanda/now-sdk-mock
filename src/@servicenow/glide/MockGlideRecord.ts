@@ -14,6 +14,7 @@ export class MockGlideRecord {
     public _database: Database = Database.getInstance();
     private _snTestEnvironment: SNTestEnvironment = SNTestEnvironment.getInstance();
     private tableProperties: Map<string, ts.TypeElement> = new Map();
+    private refTableMap: Map<string, string> = new Map();
 
     private _mockNew: any = {};
     public get mockNew(): any {
@@ -115,6 +116,9 @@ export class MockGlideRecord {
         if(dbInit.tableProperties) {
             this.tableProperties = dbInit.tableProperties;
         }
+        if(dbInit.referenceFields) {
+            this.refTableMap = dbInit.referenceFields;
+        }
         this.tableProperties.forEach((property, name) => {
             //console.log(`  - ${name}: ${typeChecker.typeToString(typeChecker.getTypeAtLocation(property))}`);
            
@@ -135,7 +139,7 @@ export class MockGlideRecord {
 
         Object.defineProperty(this, prop, {
             get: () => {
-                    return this.getValue(prop);
+                    return this.getOrCreateGlideElement(prop);
             },
             set: (value) => {
                 this.setValue(prop, value);
@@ -179,7 +183,13 @@ export class MockGlideRecord {
     public get(sysId: string) {
         this.initQueryGr();
         this._isNewRecord = false;
-        this.mockCurrent = this.data.find((record) => record.sys_id === sysId);
+        this.mockCurrent = this.data.find((record) => {
+            const id = record.sys_id;
+            if (id instanceof MockGlideElement) {
+                return id.getValue() === sysId;
+            }
+            return id === sysId;
+        });
         if (this._mockCurrent) {
             this.mockIndex = this.data.indexOf(this.mockCurrent);
         }
@@ -242,7 +252,8 @@ export class MockGlideRecord {
                 });
 
                 this._operation = "insert";
-                let id = this._mockNew.sys_id;
+                let rawSysId = this._mockNew.sys_id;
+                let id = rawSysId instanceof MockGlideElement ? rawSysId.getValue() : rawSysId;
                 dbTable.addRow(this._mockNew);
                 this._mockNew = null;
                 this.get(id);
@@ -252,7 +263,7 @@ export class MockGlideRecord {
                         br.method.call(this, this);
                     }
                 });
-                return this.mockCurrent.sys_id;
+                return this.getValue('sys_id');
             }
         }
         return null;
@@ -273,7 +284,11 @@ export class MockGlideRecord {
             record._mockUpdated = true;
         }
         this._operation = "update";
-        return record.sys_id || 'mockSysId';
+        const sysId = record.sys_id;
+        if (sysId instanceof MockGlideElement) {
+            return sysId.getValue() || 'mockSysId';
+        }
+        return sysId || 'mockSysId';
     }
 
     public setLimit(limit: number) {
@@ -288,24 +303,40 @@ export class MockGlideRecord {
     }
 
     public getValue(column: string) {
-        //if (this.mockCurrent[column] instanceof MockGlideElement) {
-          
-            return this.mockCurrent[column].getValue();
-        //}
-       
-        //return this.mockCurrent[column] ?? null;
+        const val = this.mockCurrent[column];
+        if (val === undefined || val === null) {
+            return '';
+        }
+        if (val instanceof MockGlideElement) {
+            return val.getValue();
+        }
+        return val;
     }
 
-    public getElement(column: string) {
-        let mockElement: MockGlideElement;
-        if (this.mockCurrent[column]) {
-            if (this.mockCurrent[column] instanceof MockGlideElement) {
-                mockElement = this.mockCurrent[column];
-            } else {
-                mockElement = new MockGlideElement(this.mockCurrent[column]);
-                mockElement.setRefRecord(this.mockCurrent[column]);
-            }
-            return mockElement;
+    public getOrCreateGlideElement(prop: string): MockGlideElement {
+        const val = this.mockCurrent[prop];
+        if (val instanceof MockGlideElement) {
+            return val;
+        }
+        // Wrap plain value (or undefined/null) into MockGlideElement
+        const element = new MockGlideElement(val !== undefined ? val : null);
+
+        // Set reference table name if this is a reference field
+        const refTable = this.refTableMap.get(prop);
+        if (refTable) {
+            element.setRefRecordTableName(refTable);
+        }
+
+        // Store back so subsequent accesses return the same element
+        if (this.mockCurrent) {
+            this.mockCurrent[prop] = element;
+        }
+        return element;
+    }
+
+    public getElement(column: string): MockGlideElement | null {
+        if (this.mockCurrent[column] !== undefined || this.tableProperties.has(column)) {
+            return this.getOrCreateGlideElement(column);
         }
         return null;
     }

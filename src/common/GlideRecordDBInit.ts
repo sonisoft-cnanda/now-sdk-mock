@@ -9,6 +9,7 @@ export class GlideRecordDBInit{
     private modulePath:string = ""; 
     private tableInterfaceNode:ts.InterfaceDeclaration | undefined;
     public tableProperties: Map<string, ts.TypeElement> = new Map();
+    public referenceFields: Map<string, string> = new Map();
 
     constructor(tableName:string, modulePath:string = "") {
         this.tableName = tableName;
@@ -131,7 +132,23 @@ export class GlideRecordDBInit{
         // Add properties of current interface
         node.members.forEach((member) => {
             if (ts.isPropertySignature(member) && member.name) {
-                properties.set(member.name.getText(), member);
+                const propName = member.name.getText();
+                properties.set(propName, member);
+
+                // Detect reference fields: fieldName: table_name & GlideElement<"table_name">
+                if (member.type && ts.isIntersectionTypeNode(member.type)) {
+                    for (const typeNode of member.type.types) {
+                        if (ts.isTypeReferenceNode(typeNode) && typeNode.typeArguments && typeNode.typeArguments.length > 0) {
+                            const typeName = typeNode.typeName.getText();
+                            if (typeName.includes('GlideElement')) {
+                                const arg = typeNode.typeArguments[0];
+                                if (ts.isLiteralTypeNode(arg) && ts.isStringLiteral(arg.literal)) {
+                                    this.referenceFields.set(propName, arg.literal.text);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         });
 

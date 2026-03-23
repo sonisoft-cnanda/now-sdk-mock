@@ -60,6 +60,55 @@ describe('MockGlideElement', () => {
         });
     });
 
+    describe('toString', () => {
+        it('should return string representation of value', () => {
+            const elem = new MockGlideElement('hello');
+            expect(elem.toString()).toBe('hello');
+        });
+
+        it('should return empty string for null', () => {
+            const elem = new MockGlideElement(null);
+            expect(elem.toString()).toBe('');
+        });
+
+        it('should return empty string for undefined', () => {
+            const elem = new MockGlideElement(undefined);
+            expect(elem.toString()).toBe('');
+        });
+
+        it('should convert number to string', () => {
+            const elem = new MockGlideElement(42);
+            expect(elem.toString()).toBe('42');
+        });
+    });
+
+    describe('Symbol.toPrimitive', () => {
+        it('should coerce to string in string context', () => {
+            const elem = new MockGlideElement('test');
+            expect(`${elem}`).toBe('test');
+        });
+
+        it('should coerce to string with string concatenation', () => {
+            const elem = new MockGlideElement('world');
+            expect('hello ' + elem).toBe('hello world');
+        });
+
+        it('should support loose equality with string', () => {
+            const elem = new MockGlideElement('test');
+            expect(elem == ('test' as any)).toBe(true);
+        });
+
+        it('should not be strictly equal to string', () => {
+            const elem = new MockGlideElement('test');
+            expect(elem === ('test' as any)).toBe(false);
+        });
+
+        it('should coerce to number in number context', () => {
+            const elem = new MockGlideElement('42');
+            expect(+elem).toBe(42);
+        });
+    });
+
     describe('getBooleanValue', () => {
         it('should return true for truthy values', () => {
             expect(new MockGlideElement('true').getBooleanValue()).toBe(true);
@@ -102,8 +151,12 @@ describe('MockGlideElement', () => {
         it('setRefRecordTableName should set the table name', () => {
             const elem = new MockGlideElement('ref_value');
             elem.setRefRecordTableName('sys_user');
-            // No direct getter for refRecordTableName, but setRefRecord covers it
-            expect(elem.getRefTable()).toBe('some_table'); // stub returns hardcoded
+            expect(elem.getRefTable()).toBe('sys_user');
+        });
+
+        it('getRefTable should return empty string when not set', () => {
+            const elem = new MockGlideElement('val');
+            expect(elem.getRefTable()).toBe('');
         });
 
         it('getRefField should return stub value', () => {
